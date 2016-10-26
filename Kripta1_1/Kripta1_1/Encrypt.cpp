@@ -34,41 +34,73 @@ int main()
 
 	alph_and_freq(filename);
 
-	string for_vigenere = "";
+	string key = get_key();
+
+	/*string for_vigenere = "";
 	for_vigenere = encrypt_vigenere(filename);
-	cout << for_vigenere << endl;
+	cout << for_vigenere << endl;*/
 	return 0;
 }
 
 string get_key()
 {
-	string temp_key = "dima";
+	string temp_key = "";
 	bool found = false;
 	ifstream alphabet;
 	alphabet.open("alphabet.txt", ios::in);
-	string str((istreambuf_iterator<char>(alphabet)),istreambuf_iterator<char>());
-
-	//cout << str << endl;
-
-	//while (found == false)
-	//{
-	//	cout << "Enter a key: ";
-	//	getline(cin, temp_key);
-	//	if (temp_key.length() != 16)
-	//	{
-	//		cout << "Key's length < 16. Try again" << endl;
-	//		continue;
-	//	}
-	//	else
-	//	{
-	//		/*
-	//		Поискать, есть ли повторяющиеся
-	//		символы в ключе. Проверить каждый
-	//		символ на принадлежность алфавиту.
-	//		*/
-	//	}
-	//}
+	string alph((istreambuf_iterator<char>(alphabet)),istreambuf_iterator<char>());
 	alphabet.close();
+	cout << "----------Alphabet-------------------" << endl;
+	cout << "-------------------------------------" << endl;
+	cout << alph << endl;
+	cout << "-------------------------------------" << endl;
+	while (found == false)
+	{
+		cout << "Enter a key: ";
+		getline(cin, temp_key);
+		//check that len(key) == 16
+		if (temp_key.length() != 16)
+		{
+			cout << "Key's length < 16. Try again" << endl;
+			continue;
+		}
+		else
+		{
+			/*
+			Checking for a natching symbols in a key
+			*/
+			string backup_key = temp_key;
+			auto last = temp_key.end();
+			for (auto first = temp_key.begin(); first != last; ++first) {
+				last = remove(next(first), last, *first);
+			}
+			temp_key.erase(last, temp_key.end());
+			if (backup_key != temp_key) {
+				cout << "Key has a matching items! Try again" << endl;
+				continue;
+			}
+
+			cout << "Key hasn't got a matching symbols :)" << endl << endl;
+
+			/*
+			Check that key's symbols from alphabite
+			*/
+			bool flag = false;
+			for (int i = 0; i < temp_key.size(); i++) {
+				if (!(alph.find(temp_key[i]) != string::npos)) {
+					cout << "can't find symbol: " << temp_key[i] << endl;
+					flag = true;
+				}
+			}
+			if (flag)
+				continue;
+			else {
+				cout << "Correct key :))" << endl << endl;
+				break;
+			}
+		}
+
+	}
 	return temp_key;
 }
 
