@@ -6,17 +6,15 @@
 #include <algorithm>
 #include <streambuf>
 
-using namespace std;
+#define BLOCK_SIZE 16
+#define KEY_SIZE 16
 
-/*
-Пересчитать частоты. С ними хрень какая-то.
-Попробовать все файл считать сразу
-*/
+using namespace std;
 
 string get_key();
 string encrypt_vigenere(string file);
 void alph_and_freq(string file);
-void block_transposition();
+void block_transposition(string file, string key);
 
 int main()
 {
@@ -35,10 +33,14 @@ int main()
 	alph_and_freq(filename);
 
 	string key = get_key();
+	block_transposition(filename, key);
 
-	/*string for_vigenere = "";
+	string for_vigenere = "";
 	for_vigenere = encrypt_vigenere(filename);
-	cout << for_vigenere << endl;*/
+	if (for_vigenere.size() != 0)
+		cout << "Vigener: done!" << endl;
+	else
+		cout << "Vigenere: len(cipher_text) == 0" << endl;
 	return 0;
 }
 
@@ -50,16 +52,23 @@ string get_key()
 	alphabet.open("alphabet.txt", ios::in);
 	string alph((istreambuf_iterator<char>(alphabet)),istreambuf_iterator<char>());
 	alphabet.close();
-	cout << "----------Alphabet-------------------" << endl;
-	cout << "-------------------------------------" << endl;
-	cout << alph << endl;
-	cout << "-------------------------------------" << endl;
+	//cout << "----------Alphabet-------------------" << endl;
+	//cout << "-------------------------------------" << endl;
+	//cout << alph << endl;
+	//cout << "-------------------------------------" << endl;
+
+	//cout << "----------Alphabet-------------------" << endl;
+	//cout << "-------------------------------------" << endl;
+	//sort(alph.begin(), alph.end());
+	//cout << alph << endl;
+	//cout << "-------------------------------------" << endl;
+
 	while (found == false)
 	{
 		cout << "Enter a key: ";
 		getline(cin, temp_key);
 		//check that len(key) == 16
-		if (temp_key.length() != 16)
+		if (temp_key.length() != KEY_SIZE)
 		{
 			cout << "Key's length < 16. Try again" << endl;
 			continue;
@@ -69,6 +78,14 @@ string get_key()
 			/*
 			Checking for a natching symbols in a key
 			*/
+			//WATCH IT
+			//for (auto itr : temp_key)
+			//{
+
+			//}
+			//for_each(temp_key.begin(), temp_key.end(), [](const char c){
+			//});
+
 			string backup_key = temp_key;
 			auto last = temp_key.end();
 			for (auto first = temp_key.begin(); first != last; ++first) {
@@ -107,7 +124,7 @@ string get_key()
 string encrypt_vigenere(string file)
 {
 	/*
-	Считываем открытый текст для шифрования
+	Read open text for encryption
 	*/
 	ifstream text;
 	text.open(file, ios::in, ios::binary);
@@ -115,7 +132,7 @@ string encrypt_vigenere(string file)
 	text.close();
 
 	/*
-	Считываем алфавит
+	Read alphabet
 	*/
 	ifstream alphabet;
 	alphabet.open("alphabet.txt", ios::in, ios::binary);
@@ -123,7 +140,7 @@ string encrypt_vigenere(string file)
 	alphabet.close();
 
 	/*
-	Сопоставляем алфавиту цифры
+	aplhabet -> numbers
 	*/
 	vector<int> numeric_alph;
 	for (int i = 0; i < alph.size(); i++)
@@ -134,7 +151,7 @@ string encrypt_vigenere(string file)
 	//}
 
 	/*
-	Соповставляем открытому тексту цифры
+	open text -> numbers
 	*/
 	vector<int> open_text_numeric;
 	for (int i = 0; i < open_text.size(); i++) {
@@ -148,7 +165,7 @@ string encrypt_vigenere(string file)
 	}
 
 	/*
-	Шифр Виженера тут
+	Vigenere cipher here
 	*/
 	vector<int>cipher_text_numeric;
 	vector<int>key;
@@ -210,7 +227,7 @@ string encrypt_vigenere(string file)
 void alph_and_freq(string file)
 {
 	/*
-	Считываем открытый текст 
+	Read open_text
 	*/
 	ifstream text;
 	text.open(file, ios::in, ios::binary);
@@ -223,7 +240,7 @@ void alph_and_freq(string file)
 		ch = open_text[i];
 		if (ch == '\n')
 			continue;
-		//здесь заполняем алфавит открытого текста
+		//alphabet
 		if (find(alphabet.begin(), alphabet.end(), ch) != alphabet.end())
 		{
 		}
@@ -234,8 +251,7 @@ void alph_and_freq(string file)
 	}
 
 	/*
-	Контейнер map работат как словарь.
-	В нем будет {'символ': 'количество'}
+	container map works like a dict in python :)
 	*/
 	map<char, int> dict;
 	for (int i = 0; i < alphabet.size(); i++) {
@@ -245,7 +261,7 @@ void alph_and_freq(string file)
 	for (int i = 0; i < open_text[i]; i++) {
 		dict.at(open_text[i])++;
 	}
-	//запись частот в файл
+	//freq -> file
 	ofstream freq;
 	freq.open("freq.txt", ios::out, ios::binary);
 	for (auto it = dict.begin(); it != dict.end(); ++it)
@@ -253,7 +269,7 @@ void alph_and_freq(string file)
 		freq << "[" << it->first << "]" << " : " << it->second << endl;
 	}
 	freq.close();
-	//запись самого алфавита в файл
+	//alphabet -> file
 	ofstream alphabet_file;
 	alphabet_file.open("alphabet.txt", ios::out);
 	for (int i = 0; i < alphabet.size(); i++)
@@ -264,49 +280,94 @@ void alph_and_freq(string file)
 
 }
 
-void block_transposition()
+void block_transposition(string file, string key)
 {
 	/*
-	Ниже разбиваем открытый текст на блоки длиной 16
-	конечный результат будет храниться в text_table.
-	В векторе alphabet будет храниться алфавит.
-	В map-контейнере частотный анализ открытого текста.
+	Read open text
 	*/
-	//char character;
-	//string block = "";
-	//vector<string> text_table;
-	//vector<char> alphabet;
-	//while (!input.eof())
-	//{
-	//	for (int i = 0; i < 16; i++)
-	//	{
-	//		input.get(character);
-	//		if (character == '\n')
-	//			input.get(character);
-	//		block.push_back(character);
-	//		//здесь заполняем алфавит открытого текста
-	//		if (find(alphabet.begin(), alphabet.end(), character) != alphabet.end())
-	//		{
-	//		}
-	//		else
-	//		{
-	//			alphabet.push_back(character);
-	//		}
+	ifstream text;
+	text.open(file, ios::in, ios::binary);
+	string open_text((istreambuf_iterator<char>(text)), istreambuf_iterator<char>());
+	text.close();
 
-	//	}
-	//	text_table.push_back(block);
-	//	block = "";
+	int tmp1 = open_text.size() / BLOCK_SIZE;
+	int tmp2 = open_text.size() % BLOCK_SIZE;
+	/*
+	Split up open text in blocks 16
+	*/
+	vector<string> text_table;
+	string block = "";
+	int i = 0;
+	while (open_text[i] != '\0') {
+		block.push_back(open_text[i]);
+		if (block.size() == BLOCK_SIZE) {
+			text_table.push_back(block);
+			block = "";
+		}
+		i++;
+	}
+	
+	for (int i = tmp2; i < BLOCK_SIZE; i++) {
+		block.push_back('#');
+	}
+	text_table.push_back(block);
 
-	//}
-	//input.close();
+
+	//for (int i = 0; i < text_table.size(); i++)
+	//	cout << text_table[i] << endl;
 
 
 	/*
-	Здесь пользователь должен ввести ключ.
-	Он должен задаваться пользователем в виде
-	слова из алфавита. Программа должна предложить
-	ввести новый ключ, если он не подходит. Для того,
-	чтобы подошел, в нем должно быть 16 различных
-	букв из алфавита.
+	Read alphabet
 	*/
+	ifstream alphabet;
+	alphabet.open("alphabet.txt", ios::in, ios::binary);
+	string alph((istreambuf_iterator<char>(alphabet)), istreambuf_iterator<char>());
+	alphabet.close();
+	//cout << endl;
+
+	//cout << alph << endl;
+
+	vector<int>alp_numeric;
+	for (int i = 0; i < alph.size(); i++) {
+		alp_numeric.push_back(i);
+	}
+	
+	string sort_key = key;
+	sort(sort_key.begin(), sort_key.end());
+	//cout << "Key: " << key << endl;
+	//cout << "Sort key: " << sort_key << endl;
+	vector<int> num_sort_key;
+	vector<int> num_key;
+	for (int i = 0; i < sort_key.size(); i++) 
+		num_sort_key.push_back(i);
+
+	for (int i = 0; i < key.size(); i++) {
+		int j = 0;
+		while (sort_key[j] != key[i])
+			j = j + 1;
+		num_key.push_back(j);
+		//cout << j;
+	}
+	//cout << endl << endl;
+	vector<string> cipher_text;
+	for (int i = 0; i < text_table.size(); i++) {
+		string block = text_table[i];
+		string new_block = "";
+		for (int j = 0; j < num_key.size(); j++) {
+			new_block.push_back(block[num_key[j]]);
+		}
+		cipher_text.push_back(new_block);
+	}
+	//cout << endl;
+
+	//for (int i = 0; i < cipher_text.size(); i++)
+	//	cout << cipher_text[i] << endl;
+
+	ofstream transposition;
+	transposition.open("transposition", ios::out, ios::binary);
+	for (int i = 0; i < cipher_text.size(); i++)
+		transposition << cipher_text[i];
+	transposition.close();
+	cout << "Transposition: done!" << endl;
 }
