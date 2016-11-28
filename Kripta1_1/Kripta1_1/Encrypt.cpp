@@ -5,21 +5,24 @@
 #include <map>
 #include <algorithm>
 #include <streambuf>
+#include <string.h>
 
 #define BLOCK_SIZE 16
 #define KEY_SIZE 16
 
 using namespace std;
 
-string get_key();
-string encrypt_vigenere(string file);
-void alph_and_freq(string file);
-void block_transposition(string file, string key);
+
+
+string get_key(string alphabet);
+string encrypt_vigenere(string file, string alphabet);
+string alph_and_freq(string file);
+void block_transposition(string file, string key, string alphabet);
 
 int main()
 {
 	setlocale(LC_ALL, "Russian");
-	ifstream input; //входной файл
+	ifstream input;
 	string filename = "";
 	cout << "Enter a filename: ";
 	getline(cin, filename);
@@ -29,14 +32,26 @@ int main()
 		cout << "Can't find a file" << endl;
 		exit(-1);
 	}
+	string open_text((istreambuf_iterator<char>(input)), istreambuf_iterator<char>());
+	input.close();
 
-	alph_and_freq(filename);
+	transform(open_text.begin(), open_text.end(), open_text.begin(), ::tolower);
 
-	string key = get_key();
-	block_transposition(filename, key);
+	filename = "plain_text";
+
+	ofstream plaint_text;
+	plaint_text.open(filename, ios::out, ios::binary);
+	plaint_text << open_text;
+	plaint_text.close();
+
+
+	string alphabet = alph_and_freq(filename);
+	cout << alphabet << endl;
+	string key = get_key(alphabet);
+	block_transposition(filename, key, alphabet);
 
 	string for_vigenere = "";
-	for_vigenere = encrypt_vigenere(filename);
+	for_vigenere = encrypt_vigenere(filename, alphabet);
 	if (for_vigenere.size() != 0)
 		cout << "Vigener: done!" << endl;
 	else
@@ -44,24 +59,10 @@ int main()
 	return 0;
 }
 
-string get_key()
+string get_key(string alphabet)
 {
 	string temp_key = "";
 	bool found = false;
-	ifstream alphabet;
-	alphabet.open("alphabet.txt", ios::in);
-	string alph((istreambuf_iterator<char>(alphabet)),istreambuf_iterator<char>());
-	alphabet.close();
-	//cout << "----------Alphabet-------------------" << endl;
-	//cout << "-------------------------------------" << endl;
-	//cout << alph << endl;
-	//cout << "-------------------------------------" << endl;
-
-	//cout << "----------Alphabet-------------------" << endl;
-	//cout << "-------------------------------------" << endl;
-	//sort(alph.begin(), alph.end());
-	//cout << alph << endl;
-	//cout << "-------------------------------------" << endl;
 
 	while (found == false)
 	{
@@ -104,7 +105,7 @@ string get_key()
 			*/
 			bool flag = false;
 			for (int i = 0; i < temp_key.size(); i++) {
-				if (!(alph.find(temp_key[i]) != string::npos)) {
+				if (!(alphabet.find(temp_key[i]) != string::npos)) {
 					cout << "can't find symbol: " << temp_key[i] << endl;
 					flag = true;
 				}
@@ -121,166 +122,67 @@ string get_key()
 	return temp_key;
 }
 
-string encrypt_vigenere(string file)
+string encrypt_vigenere(string file, string alphabet)
 {
-	/*
-	Read open text for encryption
-	*/
-	ifstream text;
-	text.open(file, ios::in, ios::binary);
-	string open_text((istreambuf_iterator<char>(text)), istreambuf_iterator<char>());
-	text.close();
+	ifstream input_text;
+	input_text.open(file, ios::in, ios::binary);
+	string open_text((istreambuf_iterator<char>(input_text)), istreambuf_iterator<char>());
+	input_text.close();
 
-	/*
-	Read alphabet
-	*/
-	ifstream alphabet;
-	alphabet.open("alphabet.txt", ios::in, ios::binary);
-	string alph((istreambuf_iterator<char>(alphabet)), istreambuf_iterator<char>());
-	alphabet.close();
-
-	/*
-	aplhabet -> numbers
-	*/
-	vector<int> numeric_alph;
-	for (int i = 0; i < alph.size(); i++)
-		numeric_alph.push_back(i);
-
-	//for (int i = 0; i < alph.size(); i++) {
-	//	cout << alph[i] << " " << numeric_alph[i] << endl;
-	//}
-
-	/*
-	open text -> numbers
-	*/
-	vector<int> open_text_numeric;
-	for (int i = 0; i < open_text.size(); i++) {
-		char tmp = open_text[i];
-		int j = 0;
-		for (j = 0; j < alph.size(); j++) {
-			if (tmp == alph[j])
-				break;
-		}
-		open_text_numeric.push_back(numeric_alph[j]);
-	}
-
-	/*
-	Vigenere cipher here
-	*/
-	vector<int>cipher_text_numeric;
 	vector<int>key;
-	key.push_back(16);
-	key.push_back(17);
-	key.push_back(18);
-	key.push_back(19);
-	vector<int> keys;
-	for (int i = 0; i < open_text_numeric.size(); i++) {
-		keys.push_back(key[i % key.size()]);
-	}
+	key.push_back(16 % alphabet.length());
+	key.push_back(17 % alphabet.length());
+	key.push_back(18 % alphabet.length());
+	key.push_back(19 % alphabet.length());
 
-
-	for (int i = 0; i < open_text_numeric.size(); i++)
+	string cipher_text;
+	for (int i = 0; i < open_text.size(); i++)
 	{
-		int num;
-		num = (open_text_numeric[i] + keys[i]) % numeric_alph.size();
-		cipher_text_numeric.push_back(num);
-	}
-	string cipher_text = "";
-	for (int i = 0; i < cipher_text_numeric.size(); i++) {
-		int tmp = cipher_text_numeric[i];
-		int j = 0;
-		for (j = 0; j < numeric_alph.size(); j++) {
-			if (tmp == numeric_alph[j])
-				break;
-		}
-
-		cipher_text.push_back(alph[j]);
+		int index = alphabet.find(open_text[i]);
+		cipher_text.push_back(alphabet[(index + key[i % key.size()]) % alphabet.size()]);
 	}
 
-	//for (int i = 0; i < cipher_text.size(); i++) {
-	//	cout << cipher_text[i];
-	//}
-	//cout << endl;
+	ofstream out_text;
+	out_text.open("vigenere", ios::out, ios::binary);
+	out_text << cipher_text;
+	out_text.close();
 
-	//for (int i = 0; i < open_text.size(); i++) {
-	//	cout << open_text[i] << "[" << open_text_numeric[i] << "]" << " ";
-	//}
-	//cout << endl << endl;
-	//for (int i = 0; i < cipher_text.size(); i++) {
-	//	cout << cipher_text[i] << "[" << cipher_text_numeric[i] << "]" << " ";
-	//}
-	//cout << endl << endl;
-	//for (int i = 0; i < keys.size(); i++) {
-	//	cout << keys[i] << " ";
-	//}
-	//cout << endl;
-	//cout << endl;
-	//cout << alph.size();
-	ofstream vigener;
-	vigener.open("vigener", ios::out, ios::binary);
-	vigener << cipher_text;
-	vigener.close();
-
-	return cipher_text;
+	return cipher_text;	
 }
 
-void alph_and_freq(string file)
+string alph_and_freq(string file)
 {
-	/*
-	Read open_text
-	*/
 	ifstream text;
-	text.open(file, ios::in, ios::binary);
+	text.open(file, ios::binary);
 	string open_text((istreambuf_iterator<char>(text)), istreambuf_iterator<char>());
 	text.close();
 
-	vector<char> alphabet;
-	for (int i = 0; i < open_text.size(); i++) {
-		char ch;
-		ch = open_text[i];
-		if (ch == '\n')
-			continue;
-		//alphabet
-		if (find(alphabet.begin(), alphabet.end(), ch) != alphabet.end())
-		{
-		}
+	map<char, double> frequencies;
+	for (auto ch : open_text)
+	{
+		if (frequencies.count(ch) == 0)
+			frequencies[ch] = 1.0;
 		else
-		{
-			alphabet.push_back(ch);
-		}
+			frequencies[ch] += 1.0;
 	}
 
-	/*
-	container map works like a dict in python :)
-	*/
-	map<char, int> dict;
-	for (int i = 0; i < alphabet.size(); i++) {
-		dict.insert(pair<char, int>(alphabet[i], 0));
-	}
-
-	for (int i = 0; i < open_text[i]; i++) {
-		dict.at(open_text[i])++;
-	}
-	//freq -> file
-	ofstream freq;
-	freq.open("freq.txt", ios::out, ios::binary);
-	for (auto it = dict.begin(); it != dict.end(); ++it)
+	string alphabet;
+	ofstream out("alph_and_freq", ios::binary);
+	for (auto map : frequencies)
 	{
-		freq << "[" << it->first << "]" << " : " << it->second << endl;
+		alphabet.insert(upper_bound(alphabet.begin(), alphabet.end(), map.first), map.first);
+		out.write(&map.first, sizeof(char));
+		double freq = map.second / open_text.size();
+		out.write((char*)&freq, sizeof(double));
 	}
-	freq.close();
-	//alphabet -> file
-	ofstream alphabet_file;
-	alphabet_file.open("alphabet.txt", ios::out);
-	for (int i = 0; i < alphabet.size(); i++)
-	{
-		alphabet_file << alphabet[i];
-	}
-	alphabet_file.close();
-
+	out.close();
+	ofstream alph("alphabet", ios::binary);
+	alph << alphabet;
+	alph.close();
+	return alphabet;
 }
 
-void block_transposition(string file, string key)
+void block_transposition(string file, string key, string alphabet)
 {
 	/*
 	Read open text
@@ -317,19 +219,9 @@ void block_transposition(string file, string key)
 	//	cout << text_table[i] << endl;
 
 
-	/*
-	Read alphabet
-	*/
-	ifstream alphabet;
-	alphabet.open("alphabet.txt", ios::in, ios::binary);
-	string alph((istreambuf_iterator<char>(alphabet)), istreambuf_iterator<char>());
-	alphabet.close();
-	//cout << endl;
-
-	//cout << alph << endl;
 
 	vector<int>alp_numeric;
-	for (int i = 0; i < alph.size(); i++) {
+	for (int i = 0; i < alphabet.size(); i++) {
 		alp_numeric.push_back(i);
 	}
 	
@@ -347,9 +239,9 @@ void block_transposition(string file, string key)
 		while (sort_key[j] != key[i])
 			j = j + 1;
 		num_key.push_back(j);
-		//cout << j;
+		cout << j << " ";
 	}
-	//cout << endl << endl;
+	cout << endl << endl;
 	vector<string> cipher_text;
 	for (int i = 0; i < text_table.size(); i++) {
 		string block = text_table[i];
