@@ -11,9 +11,10 @@
 using namespace std;
 
 int nod(int a, int b);
-void crypto_analys();
+void crypto_analys(string alphabet);
 void friedmans_magic(int keylen, string alphabet);
 int kasisky();
+string decrpyrt_transposition(string cipher_text, vector<int> key, string alphabet);
 
 int l[3000];
 int nods[3000];
@@ -26,7 +27,7 @@ int main() {
 	input_alph.close();
 	/*int keylen = kasisky();
 	friedmans_magic(keylen, alphabet);*/
-	crypto_analys();
+	crypto_analys(alphabet);
 	return 0;
 }
 
@@ -40,7 +41,9 @@ int nod(int a, int b)
 	return 1;
 }
 
-void crypto_analys() {
+void crypto_analys(string alphabet) {
+	//--------------------------------
+	//four symbols from plain_text
 	ifstream plain_text;
 	string filename = "plain_text";
 	plain_text.open(filename, ios::in, ios::binary);
@@ -51,10 +54,11 @@ void crypto_analys() {
 		plain_text_part.push_back(ch);
 	}
 	plain_text.close();
+	//---------------------------------
+	//-----------end block-------------
+	//first block from cipher text for bruteforce key
 	ifstream cipher_text;
 	filename = "";
-	//cout << "Enter the file name (cipher text): ";
-	//getline(cin, filename);
 	filename = "transposition";
 	cipher_text.open(filename, ios::in, ios::binary);
 	for (int i = 0; i < 16; i++) {
@@ -62,12 +66,21 @@ void crypto_analys() {
 		block.push_back(ch);
 	}
 	cipher_text.close();
+	//-----------end block-------------
 	for (int i = 0; i < plain_text_part.size(); i++)
 		cout << plain_text_part[i];
 	cout << endl << endl;
 	for (int i = 0; i < block.size(); i++)
 		cout << block[i];
 	cout << endl << endl;
+
+	//-------------------------------
+	//full cipher-text
+	ifstream input_encrypt_text;
+	input_encrypt_text.open("transposition", ios::in, ios::binary);
+	string encrypted_text((istreambuf_iterator<char>(input_encrypt_text)), istreambuf_iterator<char>());
+	input_encrypt_text.close();
+	//-----------end block------------
 
 	vector<int> reconstructed_key(16, 17);
 
@@ -133,14 +146,86 @@ void crypto_analys() {
 		for (int j = 0; j < copy_reconstructed_key.size(); j++)
 			cout << copy_reconstructed_key[j] << " ";
 		cout << endl;
-		/*
-		Here: decrypt.
-		Ask good key or continue
-		*/
-		copy_reconstructed_key = reconstructed_key;
+		if (i == 9) {
+			reconstructed_key = copy_reconstructed_key;
+			break;
+		}
+		//---------------------------------------
+		//try to decrypt with temporary key
+		//copy_reconstructed_key = reconstructed_key;
+		string decrypted = decrpyrt_transposition(encrypted_text, copy_reconstructed_key, alphabet);
+		//-----------end block-------------
+		cout << endl;
+		cout << "-----------------------------" << endl;
+		cout << decrypted << endl;
+		cout << "-----------------------------" << endl;
+		cout << "Do u want continue? (y\n): ";
+		char answer = 'q';
+		cin >> answer;
+		if (answer == 'n') {
+			reconstructed_key = copy_reconstructed_key;
+			break;
+		}
 
 	}
+	//saving key
+	cout << "Find a key! " << endl;
+	cout << "Do u want to see decrypted-text? (y\n)";
+	char answer;
+	cin >> answer;
+	if (answer == 'y') {
+		string decrypted = decrpyrt_transposition(encrypted_text, reconstructed_key, alphabet);
+		cout << "-------------------------------" << endl;
+		cout << "-------------------------------" << endl;
+		cout << decrypted << endl;
+		cout << "-------------------------------" << endl;
+		cout << "-------------------------------" << endl;
+	}
 
+}
+
+string decrpyrt_transposition(string cipher_text, vector<int> key, string alphabet) {
+	vector<string> decrypted_text;
+	vector<string> encrypted_text;
+
+	int tmp1 = cipher_text.size() / 16;
+	int tmp2 = cipher_text.size() % 16;
+
+	string block = "";
+	int i = 0;
+	while (cipher_text[i] != '\0') {
+		block.push_back(cipher_text[i]);
+		if (block.size() == 16) {
+			encrypted_text.push_back(block);
+			block = "";
+		}
+		i++;
+	}
+
+	for (int i = tmp2; i < 16; i++) {
+		block.push_back('#');
+	}
+	encrypted_text.push_back(block);
+	for (int i = 0; i < encrypted_text.size(); i++)
+		cout << encrypted_text[i];
+	cout << endl << endl;
+
+	
+	for (int i = 0; i < encrypted_text.size(); i++) {
+		string block = encrypted_text[i];
+		string new_block = "";
+		for (int j = 0; j < block.size(); j++) {
+			new_block += block[key[j]];
+		}
+		decrypted_text.push_back(new_block);
+	}
+
+	string out_text = "";
+	for (int i = 0; i < decrypted_text.size(); i++)
+		out_text += decrypted_text[i];
+
+
+	return out_text;
 }
 
 
