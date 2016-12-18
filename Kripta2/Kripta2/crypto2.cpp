@@ -11,8 +11,8 @@ us s[16] = { 4, 10, 9, 2, 13, 8, 0, 14, 6, 11, 1, 12, 7, 15, 5, 3 };
 ui sp(us half_block, us half_key);
 ui lm(ui block, us key);
 ui f(ui block, us key);
-ui encrypt(ui block, ui key);
-ui decrypt(ui block, ui key);
+ui encrypt_block(ui block, ui key);
+ui decrypt_block(ui block, ui key);
 
 int main() {
 	//key
@@ -78,8 +78,8 @@ int main() {
 				break;
 			}
 		}
-		encrypted_block = encrypt(block, key);
-		for (ui i = 0; i<4; i++)
+		encrypted_block = encrypt_block(block, key);
+		for (ui i = 0; i  <4; i++)
 		{
 			c = (encrypted_block >> (8 * (3 - i)));
 			output >> c;
@@ -87,7 +87,7 @@ int main() {
 	}
 	if (incomp_block == 0)
 	{
-		encrypted_block = encrypt(2147483648, key);
+		encrypted_block = encrypt_block(2147483648, key);
 		for (ui i = 0; i<4; i++)
 		{
 			c = (encrypted_block >> (8 * (3 - i)));
@@ -96,6 +96,59 @@ int main() {
 	}
 	input.close();
 	output.close();
+	cout << "Encryption finished!" << endl;
+	char ans = 'z';
+	cout << "Do u want to decrypt file? (y/n): ";
+	cin >> ans;
+	if (ans == 'y') {
+		ifstream in("cipher", std::ifstream::ate | std::ifstream::binary);
+		ui size = in.tellg();
+		in.close();
+
+		ifstream input;
+		ofstream output;
+		input.open("cipher", ios::in, ios::binary);
+		output.open("decrypted", ios::out, ios::binary);
+
+		ui block_num = 0, decrypted_block, i = 0, j;
+		while (!input.eof())
+		{
+			//собираем блок
+			block = 0;
+			for (j = 0; j<4; j++)
+			{
+				char c = -1;
+				input.get(c);
+				if (c != -1)
+				{
+					block = block << 8;
+					block += (c + 256) % 256;
+					block_num++;
+				}
+				else {
+					input.close();
+					output.close();
+					return 0;
+				}
+			}
+			decrypted_block = decrypt_block(block, key);
+			if (block_num == size)
+			{
+				i = 0;
+				while (!(decrypted_block & 127))
+				{
+					decrypted_block = decrypted_block >> 8;
+					i++;
+				}
+			}
+			for (j = i; j < 4; j++)
+			{
+				c = (decrypted_block >> (8 * (3 - j)));
+				output << c;
+			}
+		}
+	}
+	cout << "Decryption finished!" << endl;
 	return 0;
 }
 
@@ -150,7 +203,7 @@ ui f(ui block, us key)
 {
 	us half_block1 = block >> 16;
 	us half_block2 = (block << 16) >> 16;
-	us new_half_block1, new_half_block2;
+	us new_half_block1;
 	new_half_block1 = half_block1^sp(half_block2, key);
 	block = 0;
 	block += half_block2;
@@ -158,7 +211,7 @@ ui f(ui block, us key)
 	return block;
 }
 
-ui encrypt(ui block, ui key)
+ui encrypt_block(ui block, ui key)
 {
 	us half_key1 = key >> 16;
 	us half_key2 = (key << 16) >> 16;
@@ -175,7 +228,7 @@ ui encrypt(ui block, ui key)
 	return block;
 }
 
-ui decrypt(ui block, ui key)
+ui decrypt_block(ui block, ui key)
 {
 	us half_key1 = key >> 16;
 	us half_key2 = (key << 16) >> 16;
