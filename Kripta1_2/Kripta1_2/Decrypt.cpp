@@ -25,9 +25,21 @@ int main() {
 	input_alph.open("alphabet", ios::binary);
 	string alphabet((istreambuf_iterator<char>(input_alph)), istreambuf_iterator<char>());
 	input_alph.close();
-	/*int keylen = kasisky();
-	friedmans_magic(keylen, alphabet);*/
-	crypto_analys(alphabet);
+	char answer;
+	cout << "Choose method: v - vigenere, t - transposition <-- ";
+	cin >> answer;
+	if (answer == 'v') {
+		//int keylen = kasisky();
+		friedmans_magic(4, alphabet);
+	}
+	else if (answer == 't') {
+		crypto_analys(alphabet);
+	}
+	else {
+		cout << "Wrong command!" << endl;
+		return 1;
+	}
+
 	return 0;
 }
 
@@ -126,21 +138,28 @@ void crypto_analys(string alphabet) {
 	int next = 4;
 	int tmp;
 	for (int i = 0; i < 10; i++) {
-		tmp = next;
-		next++;
+		//next += i;
+		//tmp = next;
+		copy_reconstructed_key = reconstructed_key;
+		tmp = 0;
+		cout << "Enter shift: ";
+		cin >> tmp;
 		for (int j = 0; j < copy_reconstructed_key.size(); j++) {
+
 			if (tmp > 15) {
 				tmp = tmp - 12;
 			}
+			if (copy_reconstructed_key[j] == 0 || copy_reconstructed_key[j] == 1 ||
+				copy_reconstructed_key[j] == 2 || copy_reconstructed_key[j] == 3) {
+				continue;
+			}
 			if (copy_reconstructed_key[j] == 17) {
 				copy_reconstructed_key[j] = tmp;
-				tmp++;
-				
+				tmp++;				
 			}				
 			else {
 				continue;
-			}
-				
+			}				
 		}
 
 		for (int j = 0; j < copy_reconstructed_key.size(); j++)
@@ -165,6 +184,11 @@ void crypto_analys(string alphabet) {
 		if (answer == 'n') {
 			reconstructed_key = copy_reconstructed_key;
 			break;
+		}
+		if (answer == 'y') {
+			//next += 1;
+			//tmp = next;
+			continue;
 		}
 
 	}
@@ -297,20 +321,20 @@ void friedmans_magic(int keylen, string alphabet) {
 	}
 	vector<int> tmp_key(keylen), key(keylen);
 	float beststat = 100500;
-	string plaintext2;
+	string plaintext;
 	for (int i = 0; i < alphabet.length(); i++)
 	{
-		plaintext2.clear();
+		plaintext.clear();
 		tmp_key[0] = i;
 		for (int i = 1; i < keylen; i++)
 			tmp_key[i] = (alphabet.length() + tmp_key[0] - shifts[i]) % alphabet.length();
 		for (int j = 0; j < cipher_text.length(); j++)
 		{
 			int index = alphabet.find(cipher_text[j]);
-			plaintext2.push_back(alphabet[(alphabet.size() + index - tmp_key[j % key.size()]) % alphabet.size()]);
+			plaintext.push_back(alphabet[(alphabet.size() + index - tmp_key[j % key.size()]) % alphabet.size()]);
 		}
 		map<char, double> frequencies2;
-		for (auto c : plaintext2)
+		for (auto c : plaintext)
 		{
 			if (frequencies2.count(c) == 0)
 				frequencies2[c] = 1.0;
@@ -319,20 +343,25 @@ void friedmans_magic(int keylen, string alphabet) {
 		}
 		float stat = 0.0;
 		for (auto f : frequencies2)
-			stat += pow(f.second / plaintext2.length() - frequencies[f.first], 2.0);
+			stat += pow(f.second / plaintext.length() - frequencies[f.first], 2.0);
 		if (stat < beststat)
 		{
 			beststat = stat;
 			key = tmp_key;
 		}
 	}
-	plaintext2.clear();
+	plaintext.clear();
 	for (int j = 0; j < cipher_text.length(); j++)
 	{
 		int index = alphabet.find(cipher_text[j]);
-		plaintext2.push_back(alphabet[(alphabet.size() + index - key[j % key.size()]) % alphabet.size()]);
+		plaintext.push_back(alphabet[(alphabet.size() + index - key[j % key.size()]) % alphabet.size()]);
 	}
-	cout << plaintext2 << endl;
+	cout << plaintext << endl;
+
+	ofstream lol;
+	lol.open("lol", ios::out, ios::binary);
+	lol << plaintext;
+	lol.close();
 
 	
 }
