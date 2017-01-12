@@ -47,6 +47,7 @@ int main()
 
 	string alphabet = alph_and_freq(filename);
 	cout << alphabet << endl;
+	cout << "Alph len is: " << alphabet.size() << endl;
 	string key = get_key(alphabet);
 	block_transposition(filename, key, alphabet);
 
@@ -176,6 +177,11 @@ string alph_and_freq(string file)
 		out.write((char*)&freq, sizeof(double));
 	}
 	out.close();
+	for (auto map : frequencies)
+	{
+		cout << " '" << map.first << "'" << " : " << map.second;
+	}
+	cout << endl;
 	ofstream alph("alphabet", ios::binary);
 	alph << alphabet;
 	alph.close();
