@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -14,58 +15,34 @@ ui f(ui block, us key);
 ui encrypt_block(ui block, ui key);
 ui decrypt_block(ui block, ui key);
 
-int main() {
-	//key
-	ifstream file_key;
-	string filename;
-	cout << "Enter filename with key: ";
-	getline(cin, filename);
-	file_key.open(filename, ios::in, ios::binary);
-	if (!file_key)
-	{
-		cout << "Can't find a file" << endl;
-		exit(-1);
-	}
-	string key_text((istreambuf_iterator<char>(file_key)), istreambuf_iterator<char>());
-	file_key.close();
+ui main()
+{
+	ui block_num, i, j, key, block, encrypted_block, decrypted_block, size, incomp_block = 0;
 	char c;
-	ui key = 0;
-	for (ui i = 0; i < 4; i++) {
-		c = key_text[i];
+	FILE* input;
+	FILE* output;
+	FILE* key_file;
+
+	//получаем ключ
+	key_file = fopen("key", "rb");
+	key = 0;
+	for (i = 0; i < 4; i++)
+	{
+		fscanf(key_file, "%c", &c);
 		key = key << 8;
 		key += (c + 256) % 256;
 	}
-	//------------------------------------------
-	//encryption, decryption
-	ifstream input, output;
-	ui block, incomp_block = 0, encrypted_block;
-	cout << "Enter filename with plain text: ";
-	getline(cin, filename);
-	input.open(filename, ios::in, ios::binary);
-	if (!input)
+	fclose(key_file);
+
+	input = fopen("plain", "rb");
+	output = fopen("cipher", "wb");
+	while (!feof(input))
 	{
-		cout << "Can't find input file" << endl;
-		exit(-1);
-	}
-	output.open("cipher", ios::in, ios::binary);
-	if (!output)
-	{
-		cout << "Can't find output file" << endl;
-		exit(-1);
-	}
-	string star = "#";
-	while (!input.eof())
-	{
-		cout << star << endl;
-		star += "#";
-		system("cls");
 		//собираем блок
 		block = 0;
-		for (ui i = 0; i<4; i++)
+		for (i = 0; i<4; i++)
 		{
-			c = -1;
-			input.get(c);
-			if (c != -1)
+			if (fscanf(input, "%c", &c) != -1)
 			{
 				block = block << 8;
 				block += (c + 256) % 256;
@@ -79,78 +56,82 @@ int main() {
 			}
 		}
 		encrypted_block = encrypt_block(block, key);
-		for (ui i = 0; i  <4; i++)
+		for (i = 0; i<4; i++)
 		{
 			c = (encrypted_block >> (8 * (3 - i)));
-			output >> c;
+			fprintf(output, "%c", c);
 		}
 	}
 	if (incomp_block == 0)
 	{
 		encrypted_block = encrypt_block(2147483648, key);
-		for (ui i = 0; i<4; i++)
+		for (i = 0; i<4; i++)
 		{
 			c = (encrypted_block >> (8 * (3 - i)));
-			output >> c;
+			fprintf(output, "%c", c);
 		}
 	}
-	input.close();
-	output.close();
-	cout << "Encryption finished!" << endl;
-	char ans = 'z';
-	cout << "Do u want to decrypt file? (y/n): ";
-	cin >> ans;
-	if (ans == 'y') {
-		ifstream in("cipher", std::ifstream::ate | std::ifstream::binary);
-		ui size = in.tellg();
-		in.close();
+	fclose(input);
+	fclose(output);
+	cout << "Encrypting done!" << endl;
 
-		ifstream input;
-		ofstream output;
-		input.open("cipher", ios::in, ios::binary);
-		output.open("decrypted", ios::out, ios::binary);
+	FILE* key2_file;
+	key2_file = fopen("key2", "rb");
+	key = 0;
+	for (i = 0; i < 4; i++)
+	{
+		fscanf(key2_file, "%c", &c);
+		key = key << 8;
+		key += (c + 256) % 256;
+	}
+	fclose(key2_file);
+	input = fopen("cipher", "rb");
+	output = fopen("decrypted", "wb");
 
-		ui block_num = 0, decrypted_block, i = 0, j;
-		while (!input.eof())
+	fseek(input, 0L, SEEK_END);
+	size = ftell(input);
+	fseek(input, 0L, SEEK_SET);
+
+	block_num = 0;
+	i = 0;
+	while (!feof(input))
+	{
+		//собираем блок
+		block = 0;
+		for (j = 0; j<4; j++)
 		{
-			//собираем блок
-			block = 0;
-			for (j = 0; j<4; j++)
+			if (fscanf(input, "%c", &c) != -1)
 			{
-				char c = -1;
-				input.get(c);
-				if (c != -1)
-				{
-					block = block << 8;
-					block += (c + 256) % 256;
-					block_num++;
-				}
-				else {
-					input.close();
-					output.close();
-					return 0;
-				}
+				block = block << 8;
+				block += (c + 256) % 256;
+				block_num++;
 			}
-			decrypted_block = decrypt_block(block, key);
-			if (block_num == size)
+			else
+				goto end;
+		}
+		decrypted_block = decrypt_block(block, key);
+		if (block_num == size)
+		{
+			i = 0;
+			while (!(decrypted_block & 127))
 			{
-				i = 0;
-				while (!(decrypted_block & 127))
-				{
-					decrypted_block = decrypted_block >> 8;
-					i++;
-				}
-			}
-			for (j = i; j < 4; j++)
-			{
-				c = (decrypted_block >> (8 * (3 - j)));
-				output << c;
+				decrypted_block = decrypted_block >> 8;
+				i++;
 			}
 		}
+		for (j = i; j<4; j++)
+		{
+			c = (decrypted_block >> (8 * (3 - j)));
+			fprintf(output, "%c", c);
+		}
 	}
-	cout << "Decryption finished!" << endl;
+end:
+	fclose(input);
+	fclose(output);
+	cout << "Dencrypting done!" << endl;
 	return 0;
 }
+
 
 ui sp(us half_block, us half_key)
 {
@@ -242,3 +223,5 @@ ui decrypt_block(ui block, ui key)
 	block = (block << 16) + block1;
 	return block;
 }
+
+
